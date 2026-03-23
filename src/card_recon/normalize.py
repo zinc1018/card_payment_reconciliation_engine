@@ -35,9 +35,25 @@ def normalize_amount(value: str) -> Decimal:
     return Decimal(cleaned)
 
 
+def should_include_global_payments_row(row: dict[str, object]) -> bool:
+    payment_method = normalize_header(str(row.get("Payment Method", "")))
+    card_type = normalize_header(str(row.get("Card Type", "")))
+    charge_type = normalize_header(str(row.get("Charge Type", "")))
+
+    if payment_method == "ADJ":
+        return False
+    if "ADJUSTMENT" in card_type:
+        return False
+    if charge_type == "1901":
+        return False
+    return True
+
+
 def normalize_global_payments(rows: Iterable[dict[str, object]]) -> list[NormalizedRecord]:
     normalized: list[NormalizedRecord] = []
     for idx, row in enumerate(rows, start=2):
+        if not should_include_global_payments_row(row):
+            continue
         normalized.append(
             NormalizedRecord(
                 source_system="global_payments",

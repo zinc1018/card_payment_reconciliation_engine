@@ -89,3 +89,32 @@ def test_older_gp_headers_remain_supported():
     assert gp_records[0].authorization_code == "052129"
     assert gp_records[0].amount == Decimal("233.91")
     assert gp_records[0].transaction_date == "2025-08-31"
+
+
+def test_gp_adjustment_rows_are_excluded():
+    gp_rows = [
+        {
+            "Payment Method": "AX",
+            "Batch Control Number": "BATCH-2001",
+            "Approval Code": "285115",
+            "Original Transaction Amount": "2296.82",
+            "Process Date": "2025-09-18",
+            "Card Type": "30 - AMERICAN EXPRESS",
+            "Charge Type": "1650",
+        },
+        {
+            "Payment Method": "ADJ",
+            "Batch Control Number": "BATCH-2002",
+            "Approval Code": "285115",
+            "Original Transaction Amount": "2296.82",
+            "Process Date": "2025-09-18",
+            "Card Type": "90 - ADJUSTMENTS",
+            "Charge Type": "1901",
+        },
+    ]
+
+    gp_records = normalize_global_payments(gp_rows)
+
+    assert len(gp_records) == 1
+    assert gp_records[0].batch_control == "BATCH-2001"
+    assert gp_records[0].authorization_code == "285115"

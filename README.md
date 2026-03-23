@@ -16,6 +16,7 @@ This subproject is intentionally separate from the live Excel/VBA workflow in th
 - Header alias support for:
   - older Global Payments files (`Authorization Code`, `Processing Date`, `Settlement Amount`)
   - newer Global Payments files (`Approval Code`, `Process Date`, `Settled Amount`)
+- Global Payments adjustment rows are excluded from reconciliation
 - Versapay normalization with `settle`-only filtering
 - Detail reconciliation using:
   - `CardBrand + AuthorizationCode + Amount`
@@ -39,6 +40,7 @@ This subproject is intentionally separate from the live Excel/VBA workflow in th
 - This folder does not replace the working Excel/VBA tool yet.
 - This folder is not wired to the live workbook.
 - This first revision does not yet implement full file ingestion from Excel exports.
+- This first revision does not yet implement one-to-one duplicate matching.
 
 ## Quick Start
 

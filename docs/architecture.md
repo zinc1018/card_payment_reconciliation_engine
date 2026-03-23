@@ -8,6 +8,7 @@ This Python subproject is the publishable version of the reconciliation logic. I
 
 - Versapay reconciliation uses `settle` rows only.
 - Global Payments supports multiple header layouts through aliases.
+- Global Payments adjustment rows are excluded before reconciliation.
 - Detail matching is based on:
   - `CardBrand`
   - `AuthorizationCode`
