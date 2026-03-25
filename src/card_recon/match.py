@@ -7,7 +7,7 @@ from .models import BatchReconRow, MatchResult, NormalizedRecord
 
 
 def build_detail_key(record: NormalizedRecord) -> str:
-    return f"{record.card_brand}|{record.authorization_code}|{record.amount.quantize(Decimal('0.01'))}"
+    return f"{record.card_brand}|{record.authorization_code}|{record.amount.quantize(Decimal('0.01'))}|{record.card_last4}"
 
 
 def reconcile_detail(
@@ -37,33 +37,35 @@ def derive_batch_reconciliation(matches: list[MatchResult]) -> list[BatchReconRo
     buckets: dict[tuple[str, str], dict[str, Decimal | int]] = {}
 
     for match in matches:
-        if not match.global_payments:
-            continue
-        gp_brand = match.global_payments[0].card_brand
-        gp_batch = match.global_payments[0].batch_control
-        bucket_key = (gp_brand, gp_batch)
+        gp_record = match.global_payments[0] if match.global_payments else None
+        vp_record = match.versapay[0] if match.versapay else None
+        brand = gp_record.card_brand if gp_record else vp_record.card_brand
+        batch_control = gp_record.batch_control if gp_record and gp_record.batch_control else vp_record.batch_control
+        if not batch_control:
+            batch_control = 'UNASSIGNED'
+        bucket_key = (brand, batch_control)
         if bucket_key not in buckets:
             buckets[bucket_key] = {
-                "gp_count": 0,
-                "gp_amount": Decimal("0"),
-                "vp_count": 0,
-                "vp_amount": Decimal("0"),
+                'gp_count': 0,
+                'gp_amount': Decimal('0'),
+                'vp_count': 0,
+                'vp_amount': Decimal('0'),
             }
 
         bucket = buckets[bucket_key]
-        bucket["gp_count"] += len(match.global_payments)
-        bucket["gp_amount"] += sum((r.amount for r in match.global_payments), Decimal("0"))
-        bucket["vp_count"] += len(match.versapay)
-        bucket["vp_amount"] += sum((r.amount for r in match.versapay), Decimal("0"))
+        bucket['gp_count'] += len(match.global_payments)
+        bucket['gp_amount'] += sum((r.amount for r in match.global_payments), Decimal('0'))
+        bucket['vp_count'] += len(match.versapay)
+        bucket['vp_amount'] += sum((r.amount for r in match.versapay), Decimal('0'))
 
     return [
         BatchReconRow(
             card_brand=brand,
             gp_batch_control=batch_control,
-            gp_count=int(values["gp_count"]),
-            gp_amount=Decimal(values["gp_amount"]),
-            matched_versapay_count=int(values["vp_count"]),
-            matched_versapay_amount=Decimal(values["vp_amount"]),
+            gp_count=int(values['gp_count']),
+            gp_amount=Decimal(values['gp_amount']),
+            matched_versapay_count=int(values['vp_count']),
+            matched_versapay_amount=Decimal(values['vp_amount']),
         )
         for (brand, batch_control), values in sorted(buckets.items())
     ]

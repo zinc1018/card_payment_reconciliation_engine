@@ -35,6 +35,11 @@ def normalize_amount(value: str) -> Decimal:
     return Decimal(cleaned)
 
 
+def extract_card_last4(value: str) -> str:
+    digits = "".join(ch for ch in value if ch.isdigit())
+    return digits[-4:] if len(digits) >= 4 else digits
+
+
 def should_include_global_payments_row(row: dict[str, object]) -> bool:
     payment_method = normalize_header(str(row.get("Payment Method", "")))
     card_type = normalize_header(str(row.get("Card Type", "")))
@@ -63,6 +68,7 @@ def normalize_global_payments(rows: Iterable[dict[str, object]]) -> list[Normali
                 amount=normalize_amount(resolve_field(row, "global_payments", "amount")),
                 batch_control=resolve_field(row, "global_payments", "batch_control"),
                 transaction_date=resolve_field(row, "global_payments", "transaction_date"),
+                card_last4=extract_card_last4(resolve_field(row, "global_payments", "card_number")),
             )
         )
     return normalized
@@ -84,6 +90,7 @@ def normalize_versapay(rows: Iterable[dict[str, object]]) -> list[NormalizedReco
                 batch_control=resolve_field(row, "versapay", "batch_control"),
                 source_batch_id=resolve_field(row, "versapay", "batch_control"),
                 transaction_type=tx_type,
+                card_last4=extract_card_last4(resolve_field(row, "versapay", "card_number")),
             )
         )
     return normalized

@@ -22,6 +22,7 @@ FIELD_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
             "TRANSACTION DATE",
             "ORIGINAL TRANSACTION DATE",
         ),
+        "card_number": ("CARD NUMBER", "PAN"),
     },
     "versapay": {
         "card_brand": (

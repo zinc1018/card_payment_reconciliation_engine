@@ -15,6 +15,7 @@ class NormalizedRecord:
     transaction_date: str = ""
     source_batch_id: str = ""
     transaction_type: str = ""
+    card_last4: str = ""
 
 
 @dataclass(frozen=True)

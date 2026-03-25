@@ -13,6 +13,7 @@ def test_newer_gp_headers_and_versapay_settle_filter_work_together():
             "Approval Code": "007313",
             "Original Transaction Amount": "100.00",
             "Process Date": "2025-09-01",
+            "Card Number": "411111XXXXXX1111",
         },
         {
             "Payment Method": "Visa",
@@ -20,6 +21,7 @@ def test_newer_gp_headers_and_versapay_settle_filter_work_together():
             "Approval Code": "009999",
             "Original Transaction Amount": "23.45",
             "Process Date": "2025-09-01",
+            "Card Number": "411111XXXXXX2222",
         },
     ]
     vp_rows = [
@@ -29,6 +31,7 @@ def test_newer_gp_headers_and_versapay_settle_filter_work_together():
             "auth_code": "007313",
             "amount": "100.00",
             "batch_id": "",
+            "account": "411111******1111",
         },
         {
             "type": "settle",
@@ -36,6 +39,7 @@ def test_newer_gp_headers_and_versapay_settle_filter_work_together():
             "auth_code": "007313",
             "amount": "100.00",
             "batch_id": "VP-SETTLE-1001",
+            "account": "411111******1111",
         },
         {
             "type": "settle",
@@ -43,6 +47,7 @@ def test_newer_gp_headers_and_versapay_settle_filter_work_together():
             "auth_code": "009999",
             "amount": "23.45",
             "batch_id": "VP-SETTLE-1002",
+            "account": "411111******2222",
         },
     ]
 
@@ -118,3 +123,74 @@ def test_gp_adjustment_rows_are_excluded():
     assert len(gp_records) == 1
     assert gp_records[0].batch_control == "BATCH-2001"
     assert gp_records[0].authorization_code == "285115"
+
+
+def test_duplicate_auth_amount_is_disambiguated_by_card_last4():
+    gp_rows = [
+        {
+            "Payment Method": "Visa",
+            "Batch Control Number": "25254 T667",
+            "Approval Code": "00618F",
+            "Original Transaction Amount": "77.97",
+            "Card Number": "453780XXXXXX4092",
+        },
+        {
+            "Payment Method": "Visa",
+            "Batch Control Number": "25256 T989",
+            "Approval Code": "00618F",
+            "Original Transaction Amount": "77.97",
+            "Card Number": "452034XXXXXX6966",
+        },
+    ]
+    vp_rows = [
+        {
+            "type": "settle",
+            "card brand": "Visa",
+            "auth_code": "00618F",
+            "amount": "77.97",
+            "batch_id": "834500885",
+            "account": "453780******4092",
+        },
+        {
+            "type": "settle",
+            "card brand": "Visa",
+            "auth_code": "00618F",
+            "amount": "77.97",
+            "batch_id": "835347876",
+            "account": "452034******6966",
+        },
+    ]
+
+    matches = reconcile_detail(normalize_versapay(vp_rows), normalize_global_payments(gp_rows))
+    matched = [m for m in matches if m.versapay and m.global_payments]
+
+    assert len(matched) == 2
+    assert {m.key for m in matched} == {
+        'Visa|00618F|77.97|4092',
+        'Visa|00618F|77.97|6966',
+    }
+
+
+def test_batch_reconciliation_preserves_versapay_only_batch_control():
+    gp_rows = []
+    vp_rows = [
+        {
+            "type": "settle",
+            "card brand": "Visa",
+            "auth_code": "022156",
+            "amount": "77.97",
+            "batch_id": "830976351",
+            "account": "411111******2500",
+        }
+    ]
+
+    matches = reconcile_detail(normalize_versapay(vp_rows), normalize_global_payments(gp_rows))
+    batch_rows = derive_batch_reconciliation(matches)
+
+    assert len(batch_rows) == 1
+    assert batch_rows[0].card_brand == 'Visa'
+    assert batch_rows[0].gp_batch_control == '830976351'
+    assert batch_rows[0].gp_count == 0
+    assert batch_rows[0].gp_amount == Decimal('0')
+    assert batch_rows[0].matched_versapay_count == 1
+    assert batch_rows[0].matched_versapay_amount == Decimal('77.97')
